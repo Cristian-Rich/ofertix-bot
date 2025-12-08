@@ -52,8 +52,18 @@ def reset_daily():
 def get_steam_deals():
     reset_daily()
 
-    url = "https://store.steampowered.com/search/?specials=1&cc=br&l=pt-BR"
-    r = requests.get(url, timeout=20)
+    search_url = "https://store.steampowered.com/search/?specials=1&cc=br&l=portuguese"
+    headers = {
+        "User-Agent": "Mozilla/5.0",
+        "Accept-Language": "pt-BR,pt;q=0.9,en;q=0.8",
+    }
+    cookies = {
+        "Steam_Language": "portuguese",
+        # país BR; o valor após BR%7C pode ser qualquer timestamp/assinatura, aqui usamos um placeholder estável
+        "steamCountry": "BR%7C1733616000",  # 1733616000 ~ data futura em epoch; serve para fixar país
+    }
+
+    r = requests.get(search_url, headers=headers, cookies=cookies, timeout=20)
     soup = BeautifulSoup(r.text, "html.parser")
 
     deals = []
@@ -62,12 +72,14 @@ def get_steam_deals():
         link = row["href"]
 
         if ("steam", name) in shown_games:
-            continue  
+            continue
 
-        r2 = requests.get(link, timeout=20)
+        r2 = requests.get(link, headers=headers, cookies=cookies, timeout=20)
         soup2 = BeautifulSoup(r2.text, "html.parser")
+
         discount_el = soup2.select_one(".discount_block .discount_pct")
         discount = discount_el.get_text(strip=True) if discount_el else "Sem desconto"
+
         price_el = soup2.select_one(".discount_block .discount_final_price")
         price = price_el.get_text(strip=True) if price_el else "Preço indisponível"
 
@@ -84,6 +96,7 @@ def get_steam_deals():
 
     save_shown_games(shown_games, last_reset_date)
     return deals
+
 
 
 def get_epic_free_games():
